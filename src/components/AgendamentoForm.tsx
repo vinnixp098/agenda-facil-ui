@@ -115,7 +115,7 @@ export function AgendamentoForm({ empresaId, onSuccess }: Props) {
     try {
       const atendimento = await api.criarAtendimento({
         cliente: form.cliente,
-        telefone: form.telefone,
+        telefone: form.telefone.replace(/\D/g, ""),
         empresaId,
         status: 'AGENDADO',
         data_agendamento: dataAgendamento,
