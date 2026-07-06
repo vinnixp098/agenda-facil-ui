@@ -1,6 +1,6 @@
 import type { IAtendimento, IServicoItem, IServico, IUsuario } from './types';
 
-const BASE = 'https://meu-salao-digital-api.onrender.com/api/v1';
+const BASE = import.meta.env.VITE_API_BASE_URL as string;
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, {
