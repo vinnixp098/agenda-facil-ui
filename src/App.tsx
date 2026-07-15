@@ -1,55 +1,59 @@
-import { useEffect, useState } from 'react';
-import type { IEmpresa, Step } from './types';
-import { AgendamentoForm } from './components/AgendamentoForm';
-import { SuccessScreen } from './components/SuccessScreen';
-import styles from './App.module.css';
-import { api } from './api';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { NotifProvider } from './context/NotifContext';
+import { LoginPage } from './pages/LoginPage';
+import { CadastroPage } from './pages/CadastroPage';
+import { AlterarSenhaPage } from './pages/AlterarSenhaPage';
+import { DashboardPage } from './pages/DashboardPage';
+import { AtendimentosPage } from './pages/AtendimentosPage';
+import { RelatoriosPage } from './pages/RelatoriosPage';
+import { ServicosPage } from './pages/ServicosPage';
+import { MenuPage } from './pages/MenuPage';
+import type { ReactNode } from 'react';
+
+function RequireAuth({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  return user ? <>{children}</> : <Navigate to="/login" replace />;
+}
+
+function RequireAdmin({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.perfil !== 'ADMIN') return <Navigate to="/atendimentos" replace />;
+  return <>{children}</>;
+}
+
+function RootRedirect() {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  return <Navigate to={user.perfil === 'ADMIN' ? '/dashboard' : '/atendimentos'} replace />;
+}
+
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<RootRedirect />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/cadastro" element={<CadastroPage />} />
+      <Route path="/alterar-senha" element={<AlterarSenhaPage />} />
+      <Route path="/dashboard" element={<RequireAdmin><DashboardPage /></RequireAdmin>} />
+      <Route path="/atendimentos" element={<RequireAuth><AtendimentosPage /></RequireAuth>} />
+      <Route path="/relatorios" element={<RequireAdmin><RelatoriosPage /></RequireAdmin>} />
+      <Route path="/servicos" element={<RequireAdmin><ServicosPage /></RequireAdmin>} />
+      <Route path="/menu" element={<RequireAuth><MenuPage /></RequireAuth>} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
 
 export default function App() {
-  const [step, setStep] = useState<Step>('form');
-  const [empresa, setEmpresa] = useState<IEmpresa>()
-
-  const empresaId = Number(new URLSearchParams(window.location.search).get('empresaId'));
-
-  useEffect(() => {
-    Promise.all([
-      api.getDadosEmpresa(empresaId),
-      api.getServicos(empresaId),
-      api.getUsuarios(empresaId),
-    ])
-      .then(([d]) => { setEmpresa(d[0]) })
-      .catch(() => { })
-      .finally(() => { });
-  }, [empresaId])
-
-  if (!empresaId) {
-    return (
-      <div className={styles.page}>
-        <div className={styles.card}>
-          <p className={styles.erroEmpresa}>Link inválido. Entre em contato com o salão para obter o link correto.</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className={styles.page}>
-      <div className={styles.card}>
-        <header className={styles.header}>
-          <div className={styles.logo}>✂</div>
-          <div>
-            <h1 className={styles.title}>{empresa?.description}</h1>
-            {/* <h1 className={styles.title}>Agende seu atendimento</h1> */}
-            <p className={styles.subtitle}>Rápido e fácil, sem precisar ligar</p>
-          </div>
-        </header>
-
-        {step === 'form' ? (
-          <AgendamentoForm empresaId={empresaId} onSuccess={() => setStep('success')} />
-        ) : (
-          <SuccessScreen onNovo={() => setStep('form')} />
-        )}
-      </div>
-    </div>
+    <BrowserRouter>
+      <AuthProvider>
+        <NotifProvider>
+          <AppRoutes />
+        </NotifProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
